@@ -1,0 +1,82 @@
+{
+  "base_with_tools": {
+    "accuracy": 100.0,
+    "cases": [
+      {
+        "prompt": "Read ciel.py lines 1 to 80 and find any syntax bugs.",
+        "expected": "read_file",
+        "matched": true,
+        "latency_s": 51.0,
+        "output": "<tool_call>\n<function=read_file>\n<parameter=filepath>\nciel.py\n</parameter>\n<parameter=start_line>\n1\n</parameter>\n<parameter=end_line>\n80\n</parameter>\n</function>\n</tool_call>"
+      },
+      {
+        "prompt": "Search the codebase for OPEN_ROUTER_API_KEY.",
+        "expected": "grep_code",
+        "matched": true,
+        "latency_s": 8.64,
+        "output": "<tool_call>\n<function=grep_code>\n<parameter=pattern>\nOPEN_ROUTER_API_KEY\n</parameter>\n</function>\n</tool_call>"
+      },
+      {
+        "prompt": "Check GPU VRAM and system memory using terminal.",
+        "expected": "run_terminal",
+        "matched": true,
+        "latency_s": 4.79,
+        "output": "<tool_call>\n<function=run_terminal>\n<parameter=command>\nnvidia-smi --query-gpu=name,memory.total,memory.used,memory.free,temperature.gpu,power.draw,power.limit --format=csv\n</parameter>\n</function>\n</tool_call>"
+      },
+      {
+        "prompt": "Save a permanent memory that I use Arch Linux.",
+        "expected": "save_memory",
+        "matched": true,
+        "latency_s": 2.4,
+        "output": "<tool_call>\n<function=save_memory>\n<parameter=fact>\nUser uses Arch Linux.\n</parameter>\n</function>\n</tool_call>"
+      },
+      {
+        "prompt": "Look at my screen and tell me what error is visible.",
+        "expected": "see_screen",
+        "matched": true,
+        "latency_s": 2.9,
+        "output": "<tool_call>\n<function=see_screen>\n<parameter=question>\nWhat error message or issue is visible on the screen?\n</parameter>\n</function>\n</tool_call>"
+      }
+    ]
+  },
+  "finetuned_with_tools": {
+    "accuracy": 100.0,
+    "cases": [
+      {
+        "prompt": "Read ciel.py lines 1 to 80 and find any syntax bugs.",
+        "expected": "read_file",
+        "matched": true,
+        "latency_s": 13.51,
+        "output": "<tool_call>\n<function=read_file>\n<parameter=filepath>\n/home/ilham/Projects/Ciel_V3/ciel.py\n</parameter>\n<parameter=start_line>\n1\n</parameter>\n<parameter=end_line>\n80\n</parameter>\n</function>\n</tool_call>"
+      },
+      {
+        "prompt": "Search the codebase for OPEN_ROUTER_API_KEY.",
+        "expected": "grep_code",
+        "matched": true,
+        "latency_s": 3.74,
+        "output": "<tool_call>\n<function=grep_code>\n<parameter=pattern>\nOPEN_ROUTER_API_KEY\n</parameter>\n</function>\n</tool_call>"
+      },
+      {
+        "prompt": "Check GPU VRAM and system memory using terminal.",
+        "expected": "run_terminal",
+        "matched": true,
+        "latency_s": 6.39,
+        "output": "<tool_call>\n<function=run_terminal>\n<parameter=command>\nnvidia-smi --query-gpu=name,memory.used,memory.total --format=csv,noheader && free -h\n</parameter>\n</function>\n</tool_call>"
+      },
+      {
+        "prompt": "Save a permanent memory that I use Arch Linux.",
+        "expected": "save_memory",
+        "matched": true,
+        "latency_s": 3.79,
+        "output": "<tool_call>\n<function=save_memory>\n<parameter=fact>\nUser uses Arch Linux.\n</parameter>\n</function>\n</tool_call>"
+      },
+      {
+        "prompt": "Look at my screen and tell me what error is visible.",
+        "expected": "see_screen",
+        "matched": true,
+        "latency_s": 4.46,
+        "output": "<tool_call>\n<function=see_screen>\n<parameter=question>\nWhat error message or issue is visible on the screen?\n</parameter>\n</function>\n</tool_call>"
+      }
+    ]
+  }
+}
