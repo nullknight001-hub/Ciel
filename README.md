@@ -1,36 +1,32 @@
-# CIEL — Fast Multi-Model CLI & Desktop AI Agent
+# CIEL — Cognitive Interface & Execution Layer
 
-**CIEL** is a lightweight, zero-bloat Python AI coding and system assistant featuring both a **terminal CLI (`ciel.py`)** and a **dark-mode Desktop GUI (`desktop.py`)**.
+**CIEL** is a lightweight, multi-model CLI and dark-mode Desktop AI coding & Linux system agent engineered for hybrid inference and backed by a custom **81.9B parameter QLoRA fine-tuned model (`Qwen/Qwen3-Coder-Next`)**.
 
-## Features
-- **Smart Multi-Model Routing (`auto`):** Automatically routes casual chat to ultra-fast inference (`groq` / `glm`) with live token streaming, and routes coding/system tasks to strong tool-calling models (`flash` / `pro`).
-- **Built-in System & Code Tools:** Read, edit, write, and grep files, run terminal commands, search the web, capture screen context, and persist user memory.
-- **Desktop GUI (`desktop.py`) & CLI (`ciel.py`):** Use CIEL from your terminal or launch the standalone dark-mode `tkinter` desktop window.
-- **Extensible Local Models (`local_models.json`):** Drop custom Ollama or self-hosted endpoints into a git-ignored `local_models.json` file without modifying source code.
+## System Architecture & Highlights
+- **Unified Engine (`ciel.py` & `desktop.py`):** Shared `run_turn()` loop supporting live streaming, `503` backoff, and local/cloud fallback.
+- **Concurrency & Safety:** POSIX `fcntl.flock` memory persistence alongside destructive shell command guardrails.
+- **Custom 81.9B MoE Fine-Tuning:** Trained a 4-bit NF4 QLoRA adapter (`r=16`, 2.22B trainable parameters across 512 MoE experts) on an 80GB NVIDIA H100 using a 7,500-example tool-calling dataset (`training/`).
+
+## `CIEL-80B` QLoRA Benchmark Results
+Summary of evaluation metrics from `training/eval_report_tools.json`:
+
+| Metric | Base `Qwen3-Coder-Next` (80B) | Fine-Tuned `CIEL-80B` (QLoRA) | Delta |
+| :--- | :---: | :---: | :---: |
+| **Tool Selection Accuracy** | 100.0% (5/5) | **100.0% (5/5)** | Zero catastrophic forgetting |
+| **Workspace Path Grounding** | Relative path (`ciel.py`) | **Exact absolute path resolution** | Grounded to local project tree |
+| **Multi-Constraint Shell Synthesis** | Partial (`nvidia-smi` only) | **Complete (`nvidia-smi && free -h`)** | Satisfied compound constraints |
+| **Total Evaluation Latency (5 Tasks)** | 69.73s (13.95s/task) | **31.89s (6.38s/task)** | **2.19x faster (-54.3%)** |
 
 ## Quick Start
-
 ```bash
-git clone https://github.com
-cd ciel
+git clone https://github.com/nullknight001-hub/Ciel.git
+cd Ciel
 python3 -m venv venv
 source venv/bin/activate
 pip install -r requirements.txt
+cp .env.example .env
+python ciel.py # or python desktop.py
 ```
 
-Create a `.env` file in the project root with your API key(s):
-```env
-GEMINI_API_KEY="your_gemini_key"
-OPEN_ROUTER_API_KEY="your_openrouter_key"
-GROQ_API_KEY="your_groq_key"
-```
-
-### Run the Terminal CLI
-```bash
-python ciel.py
-```
-
-### Run the Desktop GUI
-```bash
-python desktop.py
-```
+## License
+MIT License — see [LICENSE](LICENSE) for details.
