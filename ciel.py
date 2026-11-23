@@ -310,13 +310,34 @@ def edit_file(filepath: str, old_text: str, new_text: str) -> str:
         return f"Error editing {filepath}: {e}"
 
 
+def _verify_python_edit(filepath):
+    if not str(filepath).endswith(".py") or not os.path.exists(filepath):
+        return ""
+    res = subprocess.run(
+        ["/home/ilham/Projects/Ciel_V3/venv/bin/python", "-m", "py_compile", filepath],
+        capture_output=True, text=True, timeout=10
+    )
+    if res.returncode != 0:
+        return f"\n[⚠️ SYNTAX/COMPILE ERROR — FIX IMMEDIATELY]:\n{(res.stderr or res.stdout).strip()[:1200]}"
+    proj_dir = os.path.dirname(os.path.abspath(filepath))
+    tests_dir = os.path.join(proj_dir, "tests")
+    if os.path.isdir(tests_dir):
+        t_res = subprocess.run(
+            ["/home/ilham/Projects/Ciel_V3/venv/bin/python", "-m", "pytest", "-q", tests_dir],
+            capture_output=True, text=True, timeout=25
+        )
+        if t_res.returncode != 0:
+            return f"\n[⚠️ PYTEST FAILED — FIX BEFORE REPLYING]:\n{(t_res.stdout + t_res.stderr).strip()[:1500]}"
+        return "\n[✅ Verified: py_compile + pytest passed]"
+    return "\n[✅ Verified: py_compile passed]"
+
 def write_file(filepath: str, content: str) -> str:
     """Creates or overwrites a file with the given content."""
     try:
         os.makedirs(os.path.dirname(os.path.abspath(filepath)), exist_ok=True)
         with open(filepath, "w", encoding="utf-8") as f:
             f.write(content)
-        return f"Successfully wrote to {filepath}"
+        return f"Successfully wrote to {filepath}" + _verify_python_edit(filepath)
     except Exception as e:
         return f"Error writing {filepath}: {e}"
 
