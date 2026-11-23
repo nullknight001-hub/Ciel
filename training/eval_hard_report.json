@@ -1,0 +1,234 @@
+{
+  "base": {
+    "overall_accuracy": 66.7,
+    "by_category": {
+      "ambiguous": 40.0,
+      "recovery": 60.0,
+      "no_tool": 100.0
+    },
+    "total_latency_s": 138.45,
+    "cases": [
+      {
+        "cat": "ambiguous",
+        "passed": false,
+        "latency_s": 47.28,
+        "called_tool": true,
+        "sample": "I'll help you find where per-turn token usage is capped in your project. Let me search for relevant code.\n\n<tool_call>\n<function=grep_code>\n<parameter=pattern>\nper.?turn.*token|tok"
+      },
+      {
+        "cat": "ambiguous",
+        "passed": false,
+        "latency_s": 11.09,
+        "called_tool": true,
+        "sample": "<tool_call>\n<function=see_screen>\n<parameter=question>\nFind and identify the import statement for the core engine at the top of this dark-mode GUI script.\n</parameter>\n</function>\n"
+      },
+      {
+        "cat": "ambiguous",
+        "passed": false,
+        "latency_s": 6.27,
+        "called_tool": true,
+        "sample": "I'll help you verify if your core agent script compiles without syntax errors. However, I need to know which script you're referring to. Let me check if there's a core agent script"
+      },
+      {
+        "cat": "ambiguous",
+        "passed": true,
+        "latency_s": 2.3,
+        "called_tool": true,
+        "sample": "<tool_call>\n<function=save_memory>\n<parameter=fact>\nThe user is applying to KAIST with this project.\n</parameter>\n</function>\n</tool_call>"
+      },
+      {
+        "cat": "ambiguous",
+        "passed": true,
+        "latency_s": 3.15,
+        "called_tool": true,
+        "sample": "<tool_call>\n<function=see_screen>\n<parameter=question>\nWhat error popup is currently visible on the desktop? Describe its content, title, and any visible buttons or options.\n</para"
+      },
+      {
+        "cat": "recovery",
+        "passed": true,
+        "latency_s": 4.07,
+        "called_tool": true,
+        "sample": "<tool_call>\n<function=read_file>\n<parameter=filepath>\n/home/ilham/Projects/Ciel_V3/ciel.py\n</parameter>\n<parameter=start_line>\n135\n</parameter>\n<parameter=end_line>\n150\n</parameter"
+      },
+      {
+        "cat": "recovery",
+        "passed": false,
+        "latency_s": 1.92,
+        "called_tool": true,
+        "sample": "<tool_call>\n<function=grep_code>\n<parameter=pattern>\nchoose_routed_alias\n</parameter>\n</function>\n</tool_call>"
+      },
+      {
+        "cat": "recovery",
+        "passed": true,
+        "latency_s": 1.92,
+        "called_tool": true,
+        "sample": "<tool_call>\n<function=run_terminal>\n<parameter=command>\nnvidia-smi\n</parameter>\n</function>\n</tool_call>"
+      },
+      {
+        "cat": "recovery",
+        "passed": false,
+        "latency_s": 2.25,
+        "called_tool": false,
+        "sample": "The file `live_voice.py` does not exist in the current directory or location. Could you provide the correct path or confirm the file's location?"
+      },
+      {
+        "cat": "recovery",
+        "passed": true,
+        "latency_s": 1.72,
+        "called_tool": true,
+        "sample": "<tool_call>\n<function=grep_code>\n<parameter=pattern>\nfcntl\n</parameter>\n</function>\n</tool_call>"
+      },
+      {
+        "cat": "no_tool",
+        "passed": true,
+        "latency_s": 11.23,
+        "called_tool": false,
+        "sample": "4-bit NF4 (Normal Float 4-bit) QLoRA reduces VRAM usage significantly due to two main factors:\n\n1. **4-bit quantization**: Standard models use 16-bit (FP16) or 32-bit (FP32) floati"
+      },
+      {
+        "cat": "no_tool",
+        "passed": true,
+        "latency_s": 11.18,
+        "called_tool": false,
+        "sample": "The difference between `fcntl.flock` and `os.replace` when saving JSON is fundamental\u2014they serve completely different purposes:\n\n**`fcntl.flock`**:\n- A file locking mechanism for c"
+      },
+      {
+        "cat": "no_tool",
+        "passed": true,
+        "latency_s": 11.16,
+        "called_tool": false,
+        "sample": "Flash Attention reduces HBM (High Bandwidth Memory) accesses from $O(N^2)$ to $O(N)$ by **reorganizing the attention computation to maximize on-chip memory (SRAM) usage and minimiz"
+      },
+      {
+        "cat": "no_tool",
+        "passed": true,
+        "latency_s": 11.57,
+        "called_tool": false,
+        "sample": "In Python GUI applications, the choice between `threading` and `asyncio` depends on the nature of your tasks and the GUI framework you're using:\n\n## Use Threading When:\n- **Working"
+      },
+      {
+        "cat": "no_tool",
+        "passed": true,
+        "latency_s": 11.34,
+        "called_tool": false,
+        "sample": "- **Low-Rank Decomposition**: LoRA (Low-Rank Adaptation) approximates weight updates in a neural network by decomposing the update matrix into two smaller matrices: $ \\Delta W = A "
+      }
+    ]
+  },
+  "finetuned": {
+    "overall_accuracy": 66.7,
+    "by_category": {
+      "ambiguous": 40.0,
+      "recovery": 60.0,
+      "no_tool": 100.0
+    },
+    "total_latency_s": 122.32,
+    "cases": [
+      {
+        "cat": "ambiguous",
+        "passed": false,
+        "latency_s": 11.41,
+        "called_tool": true,
+        "sample": "<tool_call>\n<function=grep_code>\n<parameter=pattern>\nper.*turn|turn.*token|token.*limit|limit.*token\n</parameter>\n<parameter=directory>\n/home/ilham/Projects/Flint_Spark\n</parameter"
+      },
+      {
+        "cat": "ambiguous",
+        "passed": false,
+        "latency_s": 5.41,
+        "called_tool": true,
+        "sample": "<tool_call>\n<function=grep_code>\n<parameter=pattern>\nimport.*engine|from.*engine\n</parameter>\n<parameter=directory>\n/home/ilham/Projects/Flux_Memories\n</parameter>\n</function>\n</to"
+      },
+      {
+        "cat": "ambiguous",
+        "passed": false,
+        "latency_s": 5.23,
+        "called_tool": true,
+        "sample": "<tool_call>\n<function=grep_code>\n<parameter=pattern>\ndef main|if __name__ == \"__main__\"\n</parameter>\n<parameter=directory>\n/home/ilham/Projects/Flint\n</parameter>\n</function>\n</too"
+      },
+      {
+        "cat": "ambiguous",
+        "passed": true,
+        "latency_s": 3.39,
+        "called_tool": true,
+        "sample": "<tool_call>\n<function=save_memory>\n<parameter=fact>\nUser is applying to KAIST with this project.\n</parameter>\n</function>\n</tool_call>"
+      },
+      {
+        "cat": "ambiguous",
+        "passed": true,
+        "latency_s": 4.69,
+        "called_tool": true,
+        "sample": "<tool_call>\n<function=see_screen>\n<parameter=question>\nWhat error popup is currently visible on the screen? Describe its title, message, and any buttons or options shown.\n</paramet"
+      },
+      {
+        "cat": "recovery",
+        "passed": true,
+        "latency_s": 6.06,
+        "called_tool": true,
+        "sample": "<tool_call>\n<function=read_file>\n<parameter=filepath>\n/home/ilham/Projects/Ciel_V3/ciel.py\n</parameter>\n<parameter=start_line>\n141\n</parameter>\n<parameter=end_line>\n151\n</parameter"
+      },
+      {
+        "cat": "recovery",
+        "passed": false,
+        "latency_s": 2.81,
+        "called_tool": true,
+        "sample": "<tool_call>\n<function=grep_code>\n<parameter=pattern>\nchoose_routed_alias\n</parameter>\n</function>\n</tool_call>"
+      },
+      {
+        "cat": "recovery",
+        "passed": true,
+        "latency_s": 2.8,
+        "called_tool": true,
+        "sample": "<tool_call>\n<function=run_terminal>\n<parameter=command>\nnvidia-smi\n</parameter>\n</function>\n</tool_call>"
+      },
+      {
+        "cat": "recovery",
+        "passed": false,
+        "latency_s": 3.03,
+        "called_tool": false,
+        "sample": "The file `live_voice.py` does not exist in the current directory. Please ensure the file is present or provide the correct path."
+      },
+      {
+        "cat": "recovery",
+        "passed": true,
+        "latency_s": 2.57,
+        "called_tool": true,
+        "sample": "<tool_call>\n<function=grep_code>\n<parameter=pattern>\nfcntl\n</parameter>\n</function>\n</tool_call>"
+      },
+      {
+        "cat": "no_tool",
+        "passed": true,
+        "latency_s": 17.1,
+        "called_tool": false,
+        "sample": "4-bit NormalFloat (NF4) quantization in QLoRA reduces memory usage significantly due to:\n\n1. **Weight Quantization**: The pretrained LoRA adapter weights are quantized to 4-bit NF4"
+      },
+      {
+        "cat": "no_tool",
+        "passed": true,
+        "latency_s": 7.39,
+        "called_tool": false,
+        "sample": "`fcntl.flock(fd, fcntl.LOCK_EX)` prevents two simultaneous processes from reading and modifying the JSON data at the same time (preventing lost updates), while writing to a `.tmp` "
+      },
+      {
+        "cat": "no_tool",
+        "passed": true,
+        "latency_s": 16.82,
+        "called_tool": false,
+        "sample": "Flash Attention reduces HBM (High Bandwidth Memory) memory accesses from O(N^2) to O(N) by optimizing the attention computation to minimize data movement between GPU memory and com"
+      },
+      {
+        "cat": "no_tool",
+        "passed": true,
+        "latency_s": 16.73,
+        "called_tool": false,
+        "sample": "In a Python GUI, use **threading** when:\n\n1. **Running blocking synchronous code** (e.g., file I/O, network requests, CPU-bound tasks) without freezing the UI.\n2. **Integrating wit"
+      },
+      {
+        "cat": "no_tool",
+        "passed": true,
+        "latency_s": 16.88,
+        "called_tool": false,
+        "sample": "- **Low-Rank Decomposition**: LoRA (Low-Rank Adaptation) approximates weight updates during fine-tuning by decomposing the update matrix into two smaller matrices (e.g., \u0394W \u2248 A \u00d7 B"
+      }
+    ]
+  }
+}
