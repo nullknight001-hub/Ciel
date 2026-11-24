@@ -665,6 +665,18 @@ def _parse_raw_tool_json(content):
         pass
     return None
 
+def _execute_raw_tool(parsed, messages, on_tool=None):
+    name, args = parsed
+    if on_tool:
+        on_tool(name, args)
+    try:
+        result = _get_tool_fn(name)(**args)
+    except Exception as error:
+        result = f"Tool Error calling {name}: {error}"
+    messages.append({"role": "assistant", "content": json.dumps({"name": name, "arguments": args})})
+    messages.append({"role": "user", "content": f"[Tool {name} output]: {str(result)[:2500]}\nConfirm concisely."})
+    return result
+
 def run_turn(messages, alias="auto", effort="low", on_token=None, on_tool=None):
     if not has_any_api_key():
         warn = "No API keys found. Copy .env.example to .env and add GEMINI_API_KEY, GROQ_API_KEY, or OPEN_ROUTER_API_KEY."
@@ -726,12 +738,7 @@ def run_turn(messages, alias="auto", effort="low", on_token=None, on_tool=None):
             reply = "".join(chunks)
             parsed_raw = _parse_raw_tool_json(reply)
             if parsed_raw:
-                t_name, t_args = parsed_raw
-                if on_tool:
-                    on_tool(t_name, t_args)
-                t_res = _get_tool_fn(t_name)(**t_args)
-                messages.append({"role": "assistant", "content": reply})
-                messages.append({"role": "user", "content": f"[Tool {t_name} output]: {str(t_res)[:2500]}\nConfirm concisely."})
+                _execute_raw_tool(parsed_raw, messages, on_tool)
                 continue
             if on_token and routed == "local":
                 on_token(reply)
@@ -742,12 +749,7 @@ def run_turn(messages, alias="auto", effort="low", on_token=None, on_tool=None):
         if not getattr(msg, "tool_calls", None):
             parsed_raw = _parse_raw_tool_json(getattr(msg, "content", ""))
             if parsed_raw:
-                t_name, t_args = parsed_raw
-                if on_tool:
-                    on_tool(t_name, t_args)
-                t_res = _get_tool_fn(t_name)(**t_args)
-                messages.append({"role": "assistant", "content": msg.content})
-                messages.append({"role": "user", "content": f"[Tool {t_name} output]: {str(t_res)[:2500]}\nConfirm concisely."})
+                _execute_raw_tool(parsed_raw, messages, on_tool)
                 steps += 1
                 continue
         dumped = msg.model_dump(exclude_none=True)
@@ -899,10 +901,7 @@ if __name__ == "__main__":
                 _full = "".join(_chunks)
                 _parsed = _parse_raw_tool_json(_full)
                 if _parsed:
-                    _fn, _args = _parsed
-                    _res = tool_map[_fn](**_args) if _fn in tool_map else f"Unknown tool: {_fn}"
-                    messages.append({"role": "assistant", "content": _full})
-                    messages.append({"role": "user", "content": f"[Tool {_fn} output]: {str(_res)[:2500]}\nConfirm concisely."})
+                    _execute_raw_tool(_parsed, messages)
                     continue
                 if _routed == "local":
                     print(f"\nCIEL: {_full}")
@@ -912,6 +911,12 @@ if __name__ == "__main__":
                 break
 
             msg = response.choices[0].message
+
+            if not getattr(msg, "tool_calls", None):
+                _parsed = _parse_raw_tool_json(getattr(msg, "content", ""))
+                if _parsed:
+                    _execute_raw_tool(_parsed, messages)
+                    continue
 
             dumped = msg.model_dump(exclude_none=True)
             messages.append(dumped)
