@@ -653,7 +653,7 @@ def _execute_raw_tool(parsed, messages, on_tool=None):
     messages.append({"role": "assistant", "content": json.dumps({"name": name, "arguments": args})})
     messages.append({"role": "user", "content": f"[Tool {name} output]: {str(result)[:2500]}\nConfirm concisely."})
     if on_tool is None:
-        print(f"\nCIEL: {res}")
+        print(f"\nCIEL: {result}")
     return result
 
 def run_turn(messages, alias="auto", effort="low", on_token=None, on_tool=None):
