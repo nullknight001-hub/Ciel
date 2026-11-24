@@ -389,44 +389,27 @@ def run_terminal(command: str) -> str:
         return f"Error executing command: {e}"
 
 def play_youtube_music(query: str) -> str:
-    """Searches YouTube for multiple results, extracts unique video IDs, and plays a shuffled continuous playlist in mpv."""
+    """Starts playing immediately in mpv and builds a shuffled 15-track playlist in the background."""
     subprocess.run(["pkill", "-f", "mpv --no-video"], stderr=subprocess.DEVNULL)
-    try:
-        # Use yt-dlp to get 15 unique video IDs for the search query
-        res = subprocess.run(
-            ["yt-dlp", "--print", "id", f"ytsearch15:{query}"],
-            capture_output=True,
-            text=True,
-            check=True
-        )
-        video_ids = [line.strip() for line in res.stdout.splitlines() if line.strip()]
-        if not video_ids:
-            return f"No results found on YouTube for: '{query}'"
-
-        # Construct a temporary playlist file or pass URLs directly
-        # mpv can take multiple URLs or we can write a temporary m3u / stream list
-        import tempfile
-        playlist_fd, playlist_path = tempfile.mkstemp(suffix=".m3u", prefix="ciel_playlist_")
-        with os.fdopen(playlist_fd, "w", encoding="utf-8") as f:
-            for vid in video_ids:
-                f.write(f"https://www.youtube.com/watch?v={vid}\n")
-
-        subprocess.Popen(
-            [
-                "mpv",
-                "--no-video",
-                "--shuffle",
-                "--loop-playlist=inf",
-                playlist_path,
-            ],
-            stdout=subprocess.DEVNULL,
-            stderr=subprocess.DEVNULL,
-            start_new_session=True,
-        )
-        return f"Playing continuous shuffled playlist ({len(video_ids)} tracks) for: '{query}'"
-    except Exception as e:
-        return f"Error starting music: {e}"
-
+    cmd = (
+        'q="$1"; '
+        'mpv --no-video --loop-playlist=inf "ytdl://ytsearch1:$q" >/dev/null 2>&1 & '
+        'MPV_PID=$!; '
+        'ids=$(yt-dlp --flat-playlist --print id "ytsearch15:$q" 2>/dev/null); '
+        'if [ -n "$ids" ]; then '
+        '  f=$(mktemp /tmp/ciel_playlist_XXXXXX.m3u); '
+        '  printf "https://youtube.com\n" $ids > "$f"; '
+        '  kill "$MPV_PID" 2>/dev/null; '
+        '  nohup mpv --no-video --shuffle --loop-playlist=inf "$f" >/dev/null 2>&1 & '
+        'fi'
+    )
+    subprocess.Popen(
+        ["bash", "-c", cmd, "_", query],
+        stdout=subprocess.DEVNULL,
+        stderr=subprocess.DEVNULL,
+        start_new_session=True,
+    )
+    return f"Playing '{query}' on YouTube Music in the background."
 
 def stop_music() -> str:
     """Stops any background YouTube music currently playing."""
