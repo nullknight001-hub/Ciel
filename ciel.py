@@ -642,19 +642,27 @@ def has_any_api_key():
         or os.getenv("OPEN_ROUTER_API_KEY")
     )
 
+def _get_tool_fn(name):
+    if isinstance(ALL_TOOLS, dict):
+        return ALL_TOOLS.get(name)
+    for fn in ALL_TOOLS:
+        if getattr(fn, "__name__", None) == name:
+            return fn
+    return None
+
 def _parse_raw_tool_json(content):
     if not content:
         return None
-    s = content.strip()
-    if s.startswith("```"):
-        s = re.sub(r"^```(?:json)?\s*|\s*```$", "", s).strip()
-    if s.startswith("{") and '"name"' in s and '"arguments"' in s:
-        try:
-            obj = json.loads(s)
-            if isinstance(obj.get("name"), str) and obj["name"] in ALL_TOOLS:
-                return obj["name"], obj.get("arguments") or {}
-        except Exception:
-            pass
+    m = re.search(r"\{[\s\S]*\}", content)
+    if not m:
+        return None
+    try:
+        obj = json.loads(m.group(0))
+        name = obj.get("name")
+        if isinstance(name, str) and _get_tool_fn(name):
+            return name, obj.get("arguments") or {}
+    except Exception:
+        pass
     return None
 
 def run_turn(messages, alias="auto", effort="low", on_token=None, on_tool=None):
@@ -721,7 +729,7 @@ def run_turn(messages, alias="auto", effort="low", on_token=None, on_tool=None):
                 t_name, t_args = parsed_raw
                 if on_tool:
                     on_tool(t_name, t_args)
-                t_res = ALL_TOOLS[t_name](**t_args)
+                t_res = _get_tool_fn(t_name)(**t_args)
                 messages.append({"role": "assistant", "content": reply})
                 messages.append({"role": "user", "content": f"[Tool {t_name} output]: {str(t_res)[:2500]}\nConfirm concisely."})
                 continue
@@ -737,7 +745,7 @@ def run_turn(messages, alias="auto", effort="low", on_token=None, on_tool=None):
                 t_name, t_args = parsed_raw
                 if on_tool:
                     on_tool(t_name, t_args)
-                t_res = ALL_TOOLS[t_name](**t_args)
+                t_res = _get_tool_fn(t_name)(**t_args)
                 messages.append({"role": "assistant", "content": msg.content})
                 messages.append({"role": "user", "content": f"[Tool {t_name} output]: {str(t_res)[:2500]}\nConfirm concisely."})
                 steps += 1
