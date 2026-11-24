@@ -397,7 +397,7 @@ def play_youtube_music(query: str) -> str:
             "--no-video",
             "--shuffle",
             "--loop-playlist=inf",
-            f"ytdl://ytsearch15:{query}",
+            f"ytdl://ytsearch1:{query}",
         ],
         stdout=subprocess.DEVNULL,
         stderr=subprocess.DEVNULL,
@@ -652,6 +652,8 @@ def _execute_raw_tool(parsed, messages, on_tool=None):
         result = f"Tool Error calling {name}: {error}"
     messages.append({"role": "assistant", "content": json.dumps({"name": name, "arguments": args})})
     messages.append({"role": "user", "content": f"[Tool {name} output]: {str(result)[:2500]}\nConfirm concisely."})
+    if on_tool is None:
+        print(f"\nCIEL: {res}")
     return result
 
 def run_turn(messages, alias="auto", effort="low", on_token=None, on_tool=None):
