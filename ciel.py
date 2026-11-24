@@ -881,7 +881,7 @@ if __name__ == "__main__":
                 _parsed = _parse_raw_tool_json(_full)
                 if _parsed:
                     _execute_raw_tool(_parsed, messages)
-                    continue
+                break
                 if _routed == "local":
                     print(f"\nCIEL: {_full}")
                 else:
