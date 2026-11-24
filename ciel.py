@@ -887,15 +887,28 @@ if __name__ == "__main__":
                 break
 
             if not _needs_tools:
-                print("\nCIEL: ", end="", flush=True)
                 _chunks = []
                 for _chunk in response:
-                    _d = _chunk.choices[0].delta.content if (_chunk.choices and _chunk.choices[0].delta) else None
+                    _d = _chunk.choices.delta.content if (_chunk.choices and _chunk.choices.delta) else None
                     if _d:
-                        print(_d, end="", flush=True)
+                        if _routed != "local":
+                            if not _chunks:
+                                print("\nCIEL: ", end="", flush=True)
+                            print(_d, end="", flush=True)
                         _chunks.append(_d)
-                print()
-                messages.append({"role": "assistant", "content": "".join(_chunks)})
+                _full = "".join(_chunks)
+                _parsed = _parse_raw_tool_json(_full)
+                if _parsed:
+                    _fn, _args = _parsed
+                    _res = tool_map[_fn](**_args) if _fn in tool_map else f"Unknown tool: {_fn}"
+                    messages.append({"role": "assistant", "content": _full})
+                    messages.append({"role": "user", "content": f"[Tool {_fn} output]: {str(_res)[:2500]}\nConfirm concisely."})
+                    continue
+                if _routed == "local":
+                    print(f"\nCIEL: {_full}")
+                else:
+                    print()
+                messages.append({"role": "assistant", "content": _full})
                 break
 
             msg = response.choices[0].message
