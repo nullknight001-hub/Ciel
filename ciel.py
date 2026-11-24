@@ -93,7 +93,7 @@ MODELS = {
     },
     "flash": {
         "provider": "openrouter",
-        "model": "z-ai/glm-5.3-flash",
+        "model": "gemini-3.5-flash-lite",
         "base_url": "https://openrouter.ai/api/v1",
         "api_key": os.getenv("OPEN_ROUTER_API_KEY"),
     },
@@ -713,9 +713,20 @@ def run_turn(messages, alias="auto", effort="low", on_token=None, on_tool=None):
                 delta = chunk.choices[0].delta.content if (chunk.choices and chunk.choices[0].delta) else None
                 if delta:
                     chunks.append(delta)
-                    if on_token:
+                    if on_token and routed != "local":
                         on_token(delta)
             reply = "".join(chunks)
+            parsed_raw = _parse_raw_tool_json(reply)
+            if parsed_raw:
+                t_name, t_args = parsed_raw
+                if on_tool:
+                    on_tool(t_name, t_args)
+                t_res = ALL_TOOLS[t_name](**t_args)
+                messages.append({"role": "assistant", "content": reply})
+                messages.append({"role": "user", "content": f"[Tool {t_name} output]: {str(t_res)[:2500]}\nConfirm concisely."})
+                continue
+            if on_token and routed == "local":
+                on_token(reply)
             messages.append({"role": "assistant", "content": reply})
             return reply
 
