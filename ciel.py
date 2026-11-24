@@ -389,22 +389,16 @@ def run_terminal(command: str) -> str:
         return f"Error executing command: {e}"
 
 def play_youtube_music(query: str) -> str:
-    """Starts playing immediately in mpv and builds a shuffled 15-track playlist in the background."""
+    """Plays a shuffled 15-track YouTube Music search directly in mpv in the background."""
     subprocess.run(["pkill", "-f", "mpv --no-video"], stderr=subprocess.DEVNULL)
-    cmd = (
-        'q="$1"; '
-        'mpv --no-video --loop-playlist=inf "ytdl://ytsearch1:$q" >/dev/null 2>&1 & '
-        'MPV_PID=$!; '
-        'ids=$(yt-dlp --flat-playlist --print id "ytsearch15:$q" 2>/dev/null); '
-        'if [ -n "$ids" ]; then '
-        '  f=$(mktemp /tmp/ciel_playlist_XXXXXX.m3u); '
-        '  printf "https://youtube.com\n" $ids > "$f"; '
-        '  kill "$MPV_PID" 2>/dev/null; '
-        '  nohup mpv --no-video --shuffle --loop-playlist=inf "$f" >/dev/null 2>&1 & '
-        'fi'
-    )
     subprocess.Popen(
-        ["bash", "-c", cmd, "_", query],
+        [
+            "mpv",
+            "--no-video",
+            "--shuffle",
+            "--loop-playlist=inf",
+            f"ytdl://ytsearch15:{query}",
+        ],
         stdout=subprocess.DEVNULL,
         stderr=subprocess.DEVNULL,
         start_new_session=True,
