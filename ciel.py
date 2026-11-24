@@ -91,7 +91,7 @@ MODELS = {
         "base_url": "https://openrouter.ai/api/v1",
         "api_key": os.getenv("OPEN_ROUTER_API_KEY"),
     },
-    "glm": {
+    "flash": {
         "provider": "openrouter",
         "model": "z-ai/glm-5.3-flash",
         "base_url": "https://openrouter.ai/api/v1",
@@ -146,7 +146,7 @@ def trim_history(messages, max_messages=8):
 
 def get_client_and_model(alias: str):
     if alias == "auto":
-        alias = "glm" if ("glm" in MODELS and os.getenv("OPEN_ROUTER_API_KEY")) else "flash"
+        alias = "flash" if ("flash" in MODELS and os.getenv("OPEN_ROUTER_API_KEY")) else "flash"
     cfg = MODELS[alias]
     return OpenAI(base_url=cfg["base_url"], api_key=cfg["api_key"]), cfg["model"]
 
@@ -642,6 +642,21 @@ def has_any_api_key():
         or os.getenv("OPEN_ROUTER_API_KEY")
     )
 
+def _parse_raw_tool_json(content):
+    if not content:
+        return None
+    s = content.strip()
+    if s.startswith("```"):
+        s = re.sub(r"^```(?:json)?\s*|\s*```$", "", s).strip()
+    if s.startswith("{") and '"name"' in s and '"arguments"' in s:
+        try:
+            obj = json.loads(s)
+            if isinstance(obj.get("name"), str) and obj["name"] in ALL_TOOLS:
+                return obj["name"], obj.get("arguments") or {}
+        except Exception:
+            pass
+    return None
+
 def run_turn(messages, alias="auto", effort="low", on_token=None, on_tool=None):
     if not has_any_api_key():
         warn = "No API keys found. Copy .env.example to .env and add GEMINI_API_KEY, GROQ_API_KEY, or OPEN_ROUTER_API_KEY."
@@ -663,7 +678,7 @@ def run_turn(messages, alias="auto", effort="low", on_token=None, on_tool=None):
             }
             if routed in ("flash", "pro"):
                 create_kwargs["reasoning_effort"] = "low" if not needs_tools else effort
-            elif routed == "glm":
+            elif routed == "flash":
                 create_kwargs["extra_body"] = {"reasoning_effort": "low" if not needs_tools else effort}
             if not needs_tools:
                 create_kwargs["stream"] = True
@@ -705,6 +720,17 @@ def run_turn(messages, alias="auto", effort="low", on_token=None, on_tool=None):
             return reply
 
         msg = response.choices[0].message
+        if not getattr(msg, "tool_calls", None):
+            parsed_raw = _parse_raw_tool_json(getattr(msg, "content", ""))
+            if parsed_raw:
+                t_name, t_args = parsed_raw
+                if on_tool:
+                    on_tool(t_name, t_args)
+                t_res = ALL_TOOLS[t_name](**t_args)
+                messages.append({"role": "assistant", "content": msg.content})
+                messages.append({"role": "user", "content": f"[Tool {t_name} output]: {str(t_res)[:2500]}\nConfirm concisely."})
+                steps += 1
+                continue
         dumped = msg.model_dump(exclude_none=True)
         messages.append(dumped)
 
@@ -817,7 +843,7 @@ if __name__ == "__main__":
                 }
                 if _routed_alias in ("flash", "pro"):
                     create_kwargs["reasoning_effort"] = "low" if not _needs_tools else current_effort
-                elif _routed_alias == "glm":
+                elif _routed_alias == "flash":
                     create_kwargs["extra_body"] = {"reasoning_effort": "low" if not _needs_tools else current_effort}
                 if not _needs_tools: create_kwargs["stream"] = True
                 for _attempt in range(3):
@@ -854,6 +880,7 @@ if __name__ == "__main__":
                 break
 
             msg = response.choices[0].message
+
             dumped = msg.model_dump(exclude_none=True)
             messages.append(dumped)
 
