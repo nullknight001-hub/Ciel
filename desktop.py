@@ -193,12 +193,17 @@ class CielDesktopGUI:
 
         tk.Frame(self.shell, bg=self.border_dark, height=1).pack(fill=tk.X)
 
+        # --- Floating Composer Card (packed BOTTOM first so it never clips) ---
+        composer_outer = tk.Frame(self.shell, bg=self.bg_dark)
+        composer_outer.pack(side=tk.BOTTOM, fill=tk.X, padx=14, pady=(4, 10))
+
         # --- Scrollbar-Free Chat Stream ---
         chat_wrap = tk.Frame(self.shell, bg=self.bg_dark)
-        chat_wrap.pack(fill=tk.BOTH, expand=True, padx=14, pady=(8, 4))
+        chat_wrap.pack(side=tk.TOP, fill=tk.BOTH, expand=True, padx=14, pady=(8, 4))
 
         self.chat_area = tk.Text(
             chat_wrap,
+            height=1,
             wrap=tk.WORD,
             bg=self.bg_dark,
             fg=self.text_light,
@@ -226,10 +231,6 @@ class CielDesktopGUI:
         self.chat_area.tag_config("ciel_body", foreground="#d0d7de", font=("Sans", 10), lmargin1=10, lmargin2=10)
         self.chat_area.tag_config("tool_msg", foreground=self.warn_color, font=("Monospace", 8), lmargin1=12, lmargin2=12)
         self.chat_area.tag_config("system_msg", foreground="#6e7681", font=("Monospace", 8))
-
-        # --- Floating Composer Card ---
-        composer_outer = tk.Frame(self.shell, bg=self.bg_dark)
-        composer_outer.pack(fill=tk.X, padx=14, pady=(4, 10))
 
         composer_rim = tk.Frame(composer_outer, bg=self.border_dark, padx=1, pady=1)
         composer_rim.pack(fill=tk.X)
