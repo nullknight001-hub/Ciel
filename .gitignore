@@ -17,3 +17,6 @@ CIEL
 build/
 dist/
 *.spec
+bin/
+kaggle_worker/serve_qwen.py
+.ciel_checkpoints/

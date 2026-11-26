@@ -1,22 +1,30 @@
 import threading
 import tkinter as tk
-from tkinter import ttk, scrolledtext
+from tkinter import messagebox, scrolledtext, ttk
 
+import ciel
+import config
 from ciel import (
     MODELS,
-    get_client_and_model,
     build_system_prompt,
+    get_client_and_model,
     load_memories,
     run_turn,
+    set_confirm_handler,
 )
 
 
 class CielDesktopGUI:
+    def on_close(self):
+        if self.current_alias == "kaggle":
+            config.switch_model("auto")
+        self.root.destroy()
     def __init__(self, root):
         self.root = root
         self.root.title("CIEL - Cognitive Interface & Execution Layer")
         self.root.geometry("900x700")
         self.root.minsize(700, 500)
+        
 
         self.bg_dark = "#121212"
         self.panel_dark = "#1e1e1e"
@@ -32,10 +40,33 @@ class CielDesktopGUI:
         self.messages = [{"role": "system", "content": build_system_prompt()}]
         self.is_processing = False
 
+        set_confirm_handler(self.confirm_dangerous_command)
         self.create_widgets()
+        _boot_prompt = os.environ.pop("CIEL_INITIAL_PROMPT", "").strip()
+        if _boot_prompt and hasattr(self, "input_box"):
+            self.input_box.insert("1.0", _boot_prompt)
+            self.root.after(150, self.send_message)
+        self.root.protocol("WM_DELETE_WINDOW", self.on_close)
         self.append_system_msg(
             f"CIEL Online [{self.current_alias} -> {self.active_model}] ({len(load_memories())} memories loaded)."
         )
+
+    def confirm_dangerous_command(self, cmd: str) -> bool:
+        """Thread-safe modal confirmation when a worker thread triggers a guarded shell command."""
+        decision = {"allow": False}
+        done = threading.Event()
+
+        def ask():
+            decision["allow"] = messagebox.askyesno(
+                "CIEL Approval Required",
+                f"CIEL wants to run a potentially destructive command:\n\n{cmd}\n\nAllow execution?",
+                parent=self.root,
+            )
+            done.set()
+
+        self.root.after(0, ask)
+        done.wait()
+        return decision["allow"]
 
     def create_widgets(self):
         main_frame = tk.Frame(self.root, bg=self.bg_dark)
@@ -46,17 +77,17 @@ class CielDesktopGUI:
 
         tk.Label(
             top_frame,
-            text="✨ CIEL",
+            text="CIEL",
             font=("Segoe UI", 12, "bold"),
             fg=self.text_light,
             bg=self.panel_dark,
         ).pack(side=tk.LEFT, padx=8)
 
-        model_frame = tk.Frame(top_frame, bg=self.panel_dark)
-        model_frame.pack(side=tk.RIGHT, padx=8)
+        controls_frame = tk.Frame(top_frame, bg=self.panel_dark)
+        controls_frame.pack(side=tk.RIGHT, padx=8)
 
         tk.Button(
-            model_frame,
+            controls_frame,
             text="Clear",
             font=("Segoe UI", 9),
             bg="#2d2d2d",
@@ -66,10 +97,29 @@ class CielDesktopGUI:
             pady=3,
             cursor="hand2",
             command=self.clear_chat,
-        ).pack(side=tk.RIGHT, padx=(8, 0))
+        ).pack(side=tk.RIGHT, padx=(10, 0))
 
         tk.Label(
-            model_frame,
+            controls_frame,
+            text="Effort:",
+            font=("Segoe UI", 10),
+            fg=self.text_muted,
+            bg=self.panel_dark,
+        ).pack(side=tk.LEFT, padx=(0, 4))
+
+        self.effort_var = tk.StringVar(value=self.current_effort)
+        self.effort_dropdown = ttk.Combobox(
+            controls_frame,
+            textvariable=self.effort_var,
+            values=["low", "medium", "high"],
+            state="readonly",
+            width=8,
+        )
+        self.effort_dropdown.pack(side=tk.LEFT, padx=(0, 10))
+        self.effort_dropdown.bind("<<ComboboxSelected>>", self.on_effort_changed)
+
+        tk.Label(
+            controls_frame,
             text="Model:",
             font=("Segoe UI", 10),
             fg=self.text_muted,
@@ -79,7 +129,7 @@ class CielDesktopGUI:
         self.model_var = tk.StringVar(value=self.current_alias)
         model_choices = ["auto"] + list(MODELS.keys())
         self.model_dropdown = ttk.Combobox(
-            model_frame,
+            controls_frame,
             textvariable=self.model_var,
             values=model_choices,
             state="readonly",
@@ -156,13 +206,30 @@ class CielDesktopGUI:
         self.chat_area.delete("1.0", tk.END)
         self.chat_area.config(state=tk.DISABLED)
         self.append_system_msg("Conversation cleared.")
-
     def on_model_changed(self, event=None):
         choice = self.model_var.get().strip().lower()
         if choice == "auto" or choice in MODELS:
             self.current_alias = choice
-            _, self.active_model = get_client_and_model(self.current_alias)
-            self.append_system_msg(f"Switched model to {self.current_alias} -> {self.active_model}")
+            ciel.current_alias = choice
+            gen = getattr(self, "_switch_gen", 0) + 1
+            self._switch_gen = gen
+            self.append_system_msg(f"Switching model to {choice}...")
+
+            def _apply_switch():
+                status_msg = config.switch_model(choice)
+                if getattr(self, "_switch_gen", 0) != gen:
+                    return
+                _, active_model = get_client_and_model(choice)
+                self.root.after(0, lambda: setattr(self, "active_model", active_model))
+                self.root.after(0, self.append_system_msg, status_msg.strip("[]"))
+
+            threading.Thread(target=_apply_switch, daemon=True).start()
+    def on_effort_changed(self, event=None):
+        choice = self.effort_var.get().strip().lower()
+        if choice in ("low", "medium", "high"):
+            self.current_effort = choice
+            ciel.current_effort = choice
+            self.append_system_msg(f"Reasoning effort set to {self.current_effort}")
 
     def handle_return_key(self, event):
         if event.state & 0x1:
@@ -204,7 +271,7 @@ class CielDesktopGUI:
                 alias=self.current_alias,
                 effort=self.current_effort,
                 on_token=lambda tok: self.root.after(0, self.append_text, tok, "ciel_body"),
-                on_tool=lambda info: self.root.after(0, self.append_text, f"\n⚙ {info}\n", "tool_msg"),
+                on_tool=lambda info: self.root.after(0, self.append_text, f"\n[Tool] {info}\n", "tool_msg"),
             )
             self.root.after(0, self.finish_turn)
 
