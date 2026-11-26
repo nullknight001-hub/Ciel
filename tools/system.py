@@ -236,6 +236,59 @@ def get_desktop_context(max_clip_chars: int = 1200) -> str:
         wid = _run_quick(["kdotool", "getactivewindow"])
         if wid:
             win_title = _run_quick(["kdotool", "getwindowname", wid])
+    if (
+        not win_title
+        and "KDE" in _jv_os.environ.get("XDG_CURRENT_DESKTOP", "").upper()
+        and _jv_shutil.which("gdbus")
+        and _jv_shutil.which("journalctl")
+    ):
+        try:
+            js_path = "/tmp/ciel_kwin_active.js"
+            with open(js_path, "w", encoding="utf-8") as jf:
+                jf.write(
+                    'var w = workspace.activeWindow;\n'
+                    'if (w) { print("CIEL_ACTIVE_WIN:" + (w.resourceClass || "") + "::" + (w.caption || "")); }\n'
+                )
+            _run_quick([
+                "gdbus", "call", "--session",
+                "--dest", "org.kde.KWin",
+                "--object-path", "/Scripting",
+                "--method", "org.kde.kwin.Scripting.unloadScript",
+                "ciel_active_win",
+            ])
+            load_out = _run_quick([
+                "gdbus", "call", "--session",
+                "--dest", "org.kde.KWin",
+                "--object-path", "/Scripting",
+                "--method", "org.kde.kwin.Scripting.loadScript",
+                js_path,
+                "ciel_active_win",
+            ])
+            m_id = re.search(r"(\d+)", load_out)
+            if m_id:
+                obj_path = f"/Scripting/Script{m_id.group(1)}"
+                _run_quick([
+                    "gdbus", "call", "--session",
+                    "--dest", "org.kde.KWin",
+                    "--object-path", obj_path,
+                    "--method", "org.kde.kwin.Script.run",
+                ])
+                _run_quick([
+                    "gdbus", "call", "--session",
+                    "--dest", "org.kde.KWin",
+                    "--object-path", obj_path,
+                    "--method", "org.kde.kwin.Script.stop",
+                ])
+                logs = _run_quick([
+                    "journalctl", "--user", "-u", "plasma-kwin_wayland",
+                    "-n", "15", "--no-pager", "-o", "cat",
+                ])
+                hits = re.findall(r"CIEL_ACTIVE_WIN:([^\n]+)", logs)
+                if hits:
+                    cls_name, _, caption = hits[-1].partition("::")
+                    win_title = f"{cls_name}: {caption}".strip(": ")
+        except Exception:
+            pass
     if not win_title and _jv_shutil.which("xdotool"):
         win_title = _run_quick(["xdotool", "getactivewindow", "getwindowname"])
     if not win_title and _jv_shutil.which("xprop"):
@@ -390,11 +443,29 @@ def system_control(action: str, value: str = "") -> str:
         return "Neither wpctl nor pactl is installed."
 
     if act == "brightness":
-        if not _jv_shutil.which("brightnessctl"):
-            return "brightnessctl not installed."
         pct = max(5, min(100, int(re.sub(r"[^0-9]", "", val) or "60")))
-        _jv_sub.run(["brightnessctl", "set", f"{pct}%"], check=False)
-        return f"Screen brightness set to {pct}%."
+        if _jv_shutil.which("brightnessctl"):
+            _jv_sub.run(["brightnessctl", "set", f"{pct}%"], check=False)
+            return f"Screen brightness set to {pct}%."
+        if _jv_shutil.which("gdbus"):
+            max_out = _run_quick([
+                "gdbus", "call", "--session",
+                "--dest", "org.kde.Solid.PowerManagement",
+                "--object-path", "/org/kde/Solid/PowerManagement/Actions/BrightnessControl",
+                "--method", "org.kde.Solid.PowerManagement.Actions.BrightnessControl.brightnessMax",
+            ])
+            m = re.search(r"(\d+)", max_out)
+            if m:
+                target = int(int(m.group(1)) * pct / 100)
+                _jv_sub.run([
+                    "gdbus", "call", "--session",
+                    "--dest", "org.kde.Solid.PowerManagement",
+                    "--object-path", "/org/kde/Solid/PowerManagement/Actions/BrightnessControl",
+                    "--method", "org.kde.Solid.PowerManagement.Actions.BrightnessControl.setBrightness",
+                    str(target),
+                ], check=False)
+                return f"Screen brightness set to {pct}% (KDE PowerDevil)."
+        return "Neither brightnessctl nor KDE PowerDevil D-Bus is available."
 
     if act == "notify":
         if not _jv_shutil.which("notify-send"):
