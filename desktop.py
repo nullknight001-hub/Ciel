@@ -1,3 +1,5 @@
+import re
+import tkinter.font as tkfont
 import json
 import socket
 import os
@@ -55,6 +57,8 @@ class CielDesktopGUI:
         _, self.active_model = get_client_and_model(self.current_alias)
         self.messages = [{"role": "system", "content": build_system_prompt()}]
         self.is_processing = False
+        self._stop_thinking_anim()
+        self._format_turn_code_blocks()
 
         set_confirm_handler(self.confirm_dangerous_command)
         self.create_widgets()
@@ -88,6 +92,9 @@ class CielDesktopGUI:
         return decision["allow"]
 
     def create_widgets(self):
+        available_fonts = set(tkfont.families())
+        self.ui_font = "Inter" if "Inter" in available_fonts else "Sans"
+        self.mono_font = "JetBrains Mono" if "JetBrains Mono" in available_fonts else "Monospace"
         # Obsidian & Ciel Glass Palette
         self.bg_dark = "#0b0e14"
         self.panel_dark = "#111622"
@@ -120,18 +127,18 @@ class CielDesktopGUI:
 
         self.status_dot = tk.Label(
             left_hud, text="◈", bg=self.panel_dark, fg=self.accent_color,
-            font=("Sans", 10, "bold")
+            font=(self.ui_font, 10, "bold")
         )
         self.status_dot.pack(side=tk.LEFT)
 
         tk.Label(
             left_hud, text=" CIEL ", bg=self.panel_dark, fg=self.text_light,
-            font=("Sans", 9, "bold")
+            font=(self.ui_font, 9, "bold")
         ).pack(side=tk.LEFT)
 
         self.status_badge = tk.Label(
             left_hud, text="READY", bg="#0f293a", fg=self.accent_color,
-            font=("Monospace", 7, "bold"), padx=6, pady=1
+            font=(self.mono_font, 7, "bold"), padx=6, pady=1
         )
         self.status_badge.pack(side=tk.LEFT, padx=(2, 10))
 
@@ -141,7 +148,7 @@ class CielDesktopGUI:
         def _make_pill(parent, text, cmd, fg=self.text_light, bg=self.pill_dark):
             lbl = tk.Label(
                 parent, text=text, bg=bg, fg=fg,
-                font=("Monospace", 8, "bold"), padx=8, pady=2, cursor="hand2"
+                font=(self.mono_font, 8, "bold"), padx=8, pady=2, cursor="hand2"
             )
             lbl.pack(side=tk.LEFT, padx=2)
             lbl.bind("<Button-1>", lambda _e: cmd())
@@ -160,7 +167,7 @@ class CielDesktopGUI:
         short_model = str(getattr(self, "active_model", "")).split("/")[-1]
         self.model_pill = tk.Label(
             left_hud, text=short_model, bg=self.panel_dark, fg="#64748b",
-            font=("Monospace", 8)
+            font=(self.mono_font, 8)
         )
         self.model_pill.pack(side=tk.LEFT, padx=(6, 0))
 
@@ -201,7 +208,7 @@ class CielDesktopGUI:
             fg=self.text_light,
             insertbackground=self.accent_color,
             selectbackground="#1e3a5f",
-            font=("Sans", 10),
+            font=(self.ui_font, 10),
             bd=0,
             highlightthickness=0,
             padx=12,
@@ -224,7 +231,7 @@ class CielDesktopGUI:
             activebackground="#7dd3fc",
             activeforeground=self.accent_fg,
             disabledforeground="#0f172a",
-            font=("Sans", 9, "bold"),
+            font=(self.ui_font, 9, "bold"),
             bd=0,
             highlightthickness=0,
             padx=14,
@@ -238,7 +245,7 @@ class CielDesktopGUI:
             text="Enter send · Shift+Enter newline · Shift+Tab plan · +SEL paste screen · Esc hide",
             bg=self.bg_dark,
             fg="#475569",
-            font=("Monospace", 7),
+            font=(self.mono_font, 7),
             anchor="w",
         ).pack(fill=tk.X, padx=4, pady=(4, 0))
 
@@ -255,7 +262,7 @@ class CielDesktopGUI:
             insertbackground=self.accent_color,
             selectbackground="#1e3a5f",
             selectforeground=self.text_light,
-            font=("Sans", 10),
+            font=(self.ui_font, 10),
             bd=0,
             highlightthickness=0,
             padx=4,
@@ -268,15 +275,24 @@ class CielDesktopGUI:
         self.chat_area.bind("<Button-4>", lambda _e: self.chat_area.yview_scroll(-3, "units"))
         self.chat_area.bind("<Button-5>", lambda _e: self.chat_area.yview_scroll(3, "units"))
 
-        self.chat_area.tag_config("user_header", foreground="#93c5fd", font=("Sans", 9, "bold"), spacing1=8)
-        self.chat_area.tag_config("user_body", foreground="#f8fafc", font=("Sans", 10), lmargin1=12, lmargin2=12)
-        self.chat_area.tag_config("ciel_header", foreground=self.accent_color, font=("Sans", 9, "bold"), spacing1=8)
-        self.chat_area.tag_config("ciel_body", foreground="#cbd5e1", font=("Sans", 10), lmargin1=12, lmargin2=12)
+        self.chat_area.tag_config("user_header", foreground="#93c5fd", font=(self.ui_font, 9, "bold"), spacing1=8)
+        self.chat_area.tag_config("user_body", foreground="#f8fafc", font=(self.ui_font, 10), lmargin1=12, lmargin2=12)
+        self.chat_area.tag_config("ciel_header", foreground=self.accent_color, font=(self.ui_font, 9, "bold"), spacing1=8)
+        self.chat_area.tag_config("ciel_body", foreground="#cbd5e1", font=(self.ui_font, 10), lmargin1=12, lmargin2=12)
         self.chat_area.tag_config(
             "tool_msg", foreground=self.warn_color, background="#101725",
-            font=("Monospace", 8), lmargin1=14, lmargin2=14
+            font=(self.mono_font, 8), lmargin1=14, lmargin2=14
         )
-        self.chat_area.tag_config("system_msg", foreground="#64748b", font=("Monospace", 8))
+        self.chat_area.tag_config("system_msg", foreground="#64748b", font=(self.mono_font, 8))
+        self.chat_area.tag_config(
+            "code_block", foreground="#e2e8f0", background="#0f1520",
+            font=(self.mono_font, 9), lmargin1=14, lmargin2=14, rmargin=14,
+            spacing1=3, spacing3=4
+        )
+        self.chat_area.tag_config(
+            "inline_code", foreground="#7dd3fc", background="#131c2b",
+            font=(self.mono_font, 9)
+        )
 
     def _auto_resize_input(self, _event=None):
         lines_cnt = int(self.input_box.index("end-1c").split(".")[0])
@@ -445,6 +461,9 @@ class CielDesktopGUI:
         self.send_btn.config(state=tk.DISABLED, text="...")
         self.status_badge.config(text="THINKING", bg="#33270d", fg=self.warn_color)
         self.append_text("CIEL:\n", "ciel_header")
+        self.chat_area.mark_set("resp_start", tk.END)
+        self.chat_area.mark_gravity("resp_start", tk.LEFT)
+        self._start_thinking_anim()
 
         def worker():
             run_turn(
@@ -452,7 +471,7 @@ class CielDesktopGUI:
                 alias=self.current_alias,
                 effort=self.current_effort,
                 on_token=lambda tok: self.root.after(0, self.append_text, tok, "ciel_body"),
-                on_tool=lambda info: self.root.after(0, self.append_text, f"\n[Tool] {info}\n", "tool_msg"),
+                on_tool=lambda info: self.root.after(0, self._append_tool_line, info),
             )
             self.root.after(0, self.finish_turn)
 
@@ -552,6 +571,114 @@ class CielDesktopGUI:
                     pass
 
         threading.Thread(target=_serve, daemon=True).start()
+
+
+    def _append_tool_line(self, info: str):
+        self.append_text(f"\n[Tool] {info}\n", "tool_msg")
+        self.chat_area.mark_set("resp_start", tk.END)
+        self.chat_area.mark_gravity("resp_start", tk.LEFT)
+
+    def _start_thinking_anim(self):
+        self._anim_idx = 0
+        self._tick_thinking_anim()
+
+    def _tick_thinking_anim(self):
+        if not getattr(self, "is_processing", False):
+            return
+        badge_frames = ("◈ · ·", "· ◈ ·", "· · ◈")
+        btn_frames = ("·  ", "·· ", "···")
+        idx = getattr(self, "_anim_idx", 0)
+        self.status_badge.config(text=badge_frames[idx % 3], bg="#2b210b", fg=self.warn_color)
+        self.send_btn.config(text=btn_frames[idx % 3])
+        self._anim_idx = idx + 1
+        self._think_after_id = self.root.after(260, self._tick_thinking_anim)
+
+    def _stop_thinking_anim(self):
+        after_id = getattr(self, "_think_after_id", None)
+        if after_id:
+            try:
+                self.root.after_cancel(after_id)
+            except Exception:
+                pass
+            self._think_after_id = None
+        if hasattr(self, "_auto_resize_input"):
+            self._auto_resize_input()
+
+    def _copy_code_to_clipboard(self, code_text: str, btn: tk.Label):
+        import shutil, subprocess
+        copied = False
+        if shutil.which("wl-copy"):
+            try:
+                subprocess.run(["wl-copy"], input=code_text, text=True, timeout=0.6, check=True)
+                copied = True
+            except Exception:
+                pass
+        if not copied:
+            try:
+                self.root.clipboard_clear()
+                self.root.clipboard_append(code_text)
+            except Exception:
+                pass
+        btn.config(text="Copied ✓", fg=self.ok_color)
+        self.root.after(1400, lambda: btn.config(text="Copy", fg=self.accent_color) if btn.winfo_exists() else None)
+
+    def _insert_rich_prose(self, text: str):
+        parts = re.split(r"(`[^`\n]+`)", text)
+        for part in parts:
+            if len(part) >= 2 and part.startswith("`") and part.endswith("`"):
+                self.chat_area.insert(tk.END, part[1:-1], "inline_code")
+            elif part:
+                self.chat_area.insert(tk.END, part, "ciel_body")
+
+    def _format_turn_code_blocks(self):
+        try:
+            raw = self.chat_area.get("resp_start", tk.END)
+        except Exception:
+            return
+        if "```" not in raw and "`" not in raw:
+            return
+
+        fence_re = re.compile(r"```([a-zA-Z0-9_+-]*)\n(.*?)```", re.DOTALL)
+        matches = list(fence_re.finditer(raw))
+        if not matches and "`" not in raw:
+            return
+
+        self.chat_area.config(state=tk.NORMAL)
+        self.chat_area.delete("resp_start", tk.END)
+
+        pos = 0
+        for m in matches:
+            before = raw[pos:m.start()]
+            if before:
+                self._insert_rich_prose(before)
+
+            lang = (m.group(1) or "code").strip()
+            code = m.group(2).rstrip("\n")
+
+            bar = tk.Frame(self.chat_area, bg="#162032", padx=8, pady=2)
+            tk.Label(
+                bar, text=lang.upper(), bg="#162032", fg="#64748b",
+                font=(self.mono_font, 7, "bold")
+            ).pack(side=tk.LEFT, padx=(0, 12))
+
+            copy_lbl = tk.Label(
+                bar, text="Copy", bg="#1e2d44", fg=self.accent_color,
+                font=(self.mono_font, 7, "bold"), padx=7, pady=1, cursor="hand2"
+            )
+            copy_lbl.pack(side=tk.RIGHT)
+            copy_lbl.bind("<Button-1>", lambda _e, c=code, b=copy_lbl: self._copy_code_to_clipboard(c, b))
+
+            self.chat_area.insert(tk.END, "\n", "ciel_body")
+            self.chat_area.window_create(tk.END, window=bar)
+            self.chat_area.insert(tk.END, "\n" + code + "\n", "code_block")
+            pos = m.end()
+
+        tail = raw[pos:]
+        if tail:
+            self._insert_rich_prose(tail)
+
+        self.chat_area.see(tk.END)
+        self.chat_area.config(state=tk.DISABLED)
 
 
 if __name__ == "__main__":
