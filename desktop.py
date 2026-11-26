@@ -1,3 +1,4 @@
+import os
 import threading
 import tkinter as tk
 from tkinter import messagebox, scrolledtext, ttk
@@ -42,14 +43,13 @@ class CielDesktopGUI:
 
         set_confirm_handler(self.confirm_dangerous_command)
         self.create_widgets()
-        _boot_prompt = os.environ.pop("CIEL_INITIAL_PROMPT", "").strip()
-        if _boot_prompt and hasattr(self, "input_box"):
-            self.input_box.insert("1.0", _boot_prompt)
-            self.root.after(150, self.send_message)
-        self.root.protocol("WM_DELETE_WINDOW", self.on_close)
         self.append_system_msg(
             f"CIEL Online [{self.current_alias} -> {self.active_model}] ({len(load_memories())} memories loaded)."
         )
+        _boot_prompt = os.environ.pop("CIEL_INITIAL_PROMPT", "").strip()
+        if _boot_prompt:
+            self.input_box.insert("1.0", _boot_prompt)
+            self.root.after(150, self.send_message)
 
     def confirm_dangerous_command(self, cmd: str) -> bool:
         """Thread-safe modal confirmation when a worker thread triggers a guarded shell command."""
