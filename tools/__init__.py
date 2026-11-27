@@ -1,8 +1,8 @@
 import inspect
 from memory import delete_memory, save_memory
 from tools.files import edit_file, find_files, grep_code, read_file, write_file
-from tools.media import play_youtube_music, skip_music, stop_music
-from tools.system import launch_app, run_terminal, see_screen, set_confirm_handler
+from tools.media import open_youtube_browser, play_youtube_music, skip_music, stop_music
+from tools.system import click_mouse, launch_app, press_key, run_terminal, see_screen, set_confirm_handler, type_text
 from tools.web import read_webpage, web_search
 from tools.skills import load_skill
 

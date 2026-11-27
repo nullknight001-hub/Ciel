@@ -1,18 +1,7 @@
-#!/bin/bash
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-PYTHON_BIN="$SCRIPT_DIR/venv/bin/python"
-if [ ! -x "$PYTHON_BIN" ]; then
-    PYTHON_BIN="python3"
+#!/usr/bin/env bash
+SOCK="/tmp/ciel_dropdown.sock"
+if [ ! -S "$SOCK" ]; then
+    systemctl --user start ciel-hud.service
+    sleep 0.6
 fi
-
-CMD="\"$PYTHON_BIN\" \"$SCRIPT_DIR/live_voice.py\"; exec bash"
-
-if command -v konsole &> /dev/null; then
-    konsole -e bash -c "$CMD"
-elif command -v alacritty &> /dev/null; then
-    alacritty -e bash -c "$CMD"
-elif command -v kitty &> /dev/null; then
-    kitty bash -c "$CMD"
-else
-    xterm -e bash -c "$CMD"
-fi
+/home/ilham/Projects/Ciel_V3/venv/bin/python -c 'import json, socket; s = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM); s.settimeout(0.5); s.connect("/tmp/ciel_dropdown.sock"); s.sendall(json.dumps({"cmd": "live_voice"}).encode("utf-8")); s.close()'

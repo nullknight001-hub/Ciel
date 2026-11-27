@@ -190,7 +190,11 @@ def undo_last_edit() -> str:
     return "No checkpoints found."
 
 
+import functools as _cp_functools
+
+
 def _wrap_mutating_file_fn(fn):
+    @_cp_functools.wraps(fn)
     def _wrapped(*args, **kwargs):
         target = (
             kwargs.get("path")

@@ -50,7 +50,7 @@ def _base_build_system_prompt() -> str:
 - Available playbooks in `skills/`: {skills_list}. When a request matches one (e.g., audio/network fixes, media conversion, gallery search), call `load_skill(name)` first and follow its safe steps.
 - When asked to fix, refactor, or add features to code: explore with `find_files`/`grep_code`, read with `read_file`, edit surgically with `edit_file`, and verify with `run_terminal`.
 - Use `save_memory` automatically when Ilham shares personal facts, preferences, or project paths.
-- Use `web_search` and `read_webpage` for live information, `play_youtube_music`/`skip_music`/`stop_music` for music, `launch_app` for GUI programs, and `see_screen` when asked to inspect errors or test visually.
+- Use `web_search` and `read_webpage` for live information, `open_youtube_browser` whenever Ilham asks to open YouTube in the browser or play a track/video there (never call `play_youtube_music` when asked to play in the browser); use `play_youtube_music`/`skip_music`/`stop_music` only for background audio, `launch_app` for GUI programs, `press_key`/`type_text`/`click_mouse` for keyboard & mouse input on Wayland, and `see_screen` when asked to inspect errors or test visually.
 {project_context}
 [PERMANENT MEMORIES]
 {memory_block}
@@ -290,7 +290,8 @@ def run_turn(
                     raise
         except Exception as e:
             err_str = str(e)
-            if any(code in err_str for code in ("400", "402", "404", "413", "429", "503", "Connection", "timeout", "ConnectError")):
+            err_low = err_str.lower()
+            if any(tok in err_low for tok in ("400", "402", "404", "413", "429", "503", "rate_limit", "rate limit", "quota", "connection", "timeout", "timed out", "connecterror")):
                 failed_aliases.add(routed)
                 next_cloud = next(
                     (c for c in fallback_chain if c not in failed_aliases and alias_available(c)),
@@ -314,30 +315,53 @@ def run_turn(
 
         chunks = []
         tc_acc: dict[int, dict] = {}
-        for chunk in stream:
-            if not chunk.choices:
-                continue
-            delta = chunk.choices[0].delta
-            if not delta:
-                continue
-            if delta.content:
-                chunks.append(delta.content)
-                if on_token:
-                    on_token(delta.content)
-            if getattr(delta, "tool_calls", None):
-                for tc in delta.tool_calls:
-                    idx = tc.index if tc.index is not None else 0
-                    entry = tc_acc.setdefault(
-                        idx,
-                        {"id": "", "type": "function", "function": {"name": "", "arguments": ""}},
-                    )
-                    if tc.id:
-                        entry["id"] = tc.id
-                    if tc.function:
-                        if tc.function.name:
-                            entry["function"]["name"] += tc.function.name
-                        if tc.function.arguments:
-                            entry["function"]["arguments"] += tc.function.arguments
+        try:
+            for chunk in stream:
+                if not chunk.choices:
+                    continue
+                delta = chunk.choices[0].delta
+                if not delta:
+                    continue
+                if delta.content:
+                    chunks.append(delta.content)
+                    if on_token:
+                        on_token(delta.content)
+                if getattr(delta, "tool_calls", None):
+                    for tc in delta.tool_calls:
+                        idx = tc.index if tc.index is not None else 0
+                        entry = tc_acc.setdefault(
+                            idx,
+                            {"id": "", "type": "function", "function": {"name": "", "arguments": ""}},
+                        )
+                        if tc.id:
+                            entry["id"] = tc.id
+                        if tc.function:
+                            if tc.function.name:
+                                entry["function"]["name"] += tc.function.name
+                            if tc.function.arguments:
+                                entry["function"]["arguments"] += tc.function.arguments
+        except Exception as stream_err:
+            s_low = str(stream_err).lower()
+            if any(tok in s_low for tok in ("400", "402", "404", "413", "429", "503", "rate_limit", "rate limit", "quota", "connection", "timeout", "timed out", "connecterror")):
+                failed_aliases.add(routed)
+                next_cloud = next(
+                    (c for c in fallback_chain if c not in failed_aliases and alias_available(c)),
+                    None,
+                )
+                if next_cloud:
+                    alias = next_cloud
+                    steps -= 1
+                    continue
+                if alias_available("local") and "local" not in failed_aliases:
+                    alias = "local"
+                    steps -= 1
+                    continue
+            while len(messages) > 1 and _msg_role(messages[-1]) != "user":
+                messages.pop()
+            err_msg = f"[API Error]: {getattr(stream_err, 'body', None) or repr(stream_err)}"
+            if on_token:
+                on_token(err_msg)
+            return err_msg
 
         reply = "".join(chunks)
 

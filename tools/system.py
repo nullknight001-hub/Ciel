@@ -474,3 +474,77 @@ def system_control(action: str, value: str = "") -> str:
         return f"Notification sent: {val or 'Task completed.'}"
 
     return f"Unsupported system_control action: {action}"
+def _ydotool_env() -> dict:
+    import os
+    env = os.environ.copy()
+    sock = "/tmp/.ydotool_socket"
+    if os.path.exists(sock) and "YDOTOOL_SOCKET" not in env:
+        env["YDOTOOL_SOCKET"] = sock
+    return env
+
+
+def press_key(key: str) -> str:
+    """Presses a key using ydotool (for example 'space', 'k', 'Return', 'Tab', 'Escape', 'f', 'm')."""
+    import shutil
+    if not shutil.which("ydotool"):
+        return "Error: ydotool is not installed."
+    key_map = {
+        "space": "57:1 57:0",
+        "k": "37:1 37:0",
+        "return": "28:1 28:0",
+        "enter": "28:1 28:0",
+        "tab": "15:1 15:0",
+        "escape": "1:1 1:0",
+        "esc": "1:1 1:0",
+        "f": "33:1 33:0",
+        "m": "50:1 50:0",
+        "left": "105:1 105:0",
+        "right": "106:1 106:0",
+        "up": "103:1 103:0",
+        "down": "108:1 108:0",
+    }
+    norm = (key or "").strip().lower()
+    seq = key_map.get(norm)
+    env = _ydotool_env()
+    try:
+        args = ["ydotool", "key", *seq.split()] if seq else ["ydotool", "key", key]
+        res = subprocess.run(args, env=env, capture_output=True, text=True, timeout=5)
+        if res.returncode != 0:
+            return f"Error pressing key '{key}': {(res.stderr or res.stdout).strip()}"
+        return f"Pressed key '{key}'."
+    except Exception as e:
+        return f"Error pressing key '{key}': {e}"
+
+
+def type_text(text: str) -> str:
+    """Types text on the active window using ydotool."""
+    import shutil
+    if not shutil.which("ydotool"):
+        return "Error: ydotool is not installed."
+    env = _ydotool_env()
+    try:
+        res = subprocess.run(["ydotool", "type", "--", text], env=env, capture_output=True, text=True, timeout=10)
+        if res.returncode != 0:
+            return f"Error typing text: {(res.stderr or res.stdout).strip()}"
+        return f"Typed text ({len(text)} chars)."
+    except Exception as e:
+        return f"Error typing text: {e}"
+
+
+def click_mouse(x: int, y: int, button: str = "left") -> str:
+    """Moves cursor to screen coordinates (x, y) and clicks ('left', 'right', or 'middle')."""
+    import shutil
+    if not shutil.which("ydotool"):
+        return "Error: ydotool is not installed."
+    btn_code = {"left": "0xC0", "right": "0xC1", "middle": "0xC2"}.get((button or "left").lower(), "0xC0")
+    env = _ydotool_env()
+    try:
+        mv = subprocess.run(["ydotool", "mousemove", "--absolute", "-x", str(int(x)), "-y", str(int(y))], env=env, capture_output=True, text=True, timeout=5)
+        if mv.returncode != 0:
+            return f"Error moving mouse: {(mv.stderr or mv.stdout).strip()}"
+        clk = subprocess.run(["ydotool", "click", btn_code], env=env, capture_output=True, text=True, timeout=5)
+        if clk.returncode != 0:
+            return f"Error clicking mouse: {(clk.stderr or clk.stdout).strip()}"
+        return f"Clicked {button} at ({x}, {y})."
+    except Exception as e:
+        return f"Error clicking mouse: {e}"

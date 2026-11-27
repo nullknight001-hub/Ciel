@@ -20,3 +20,4 @@ dist/
 bin/
 kaggle_worker/serve_qwen.py
 .ciel_checkpoints/
+models/
